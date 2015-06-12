@@ -4,6 +4,7 @@ import platform
 import threading
 
 import yaml
+import numpy as np
 
 from sparkle.acq.daq_tasks import AITask, AITaskFinite, AOTaskFinite, \
     DigitalOutTask
@@ -77,6 +78,17 @@ class AbstractPlayerBase(object):
             else:
                 new_gen = None
             self.stim_changed = False
+
+            # # create a companion digital output task to send a high signal whenever this
+            # # task is outputting samples
+            devname = self.aochan.split('/')[0]
+            portname = devname + '/port0/line1'
+            self.dotask = DigitalOutTask(portname, self.fs, npts, 'ao/SampleClock')
+            # create an array to always output high, except last sample, which should 
+            # set the port back to low
+            digout = np.ones_like(self.stim, dtype=np.uint8)
+            digout[-1] = 0
+            self.dotask.write(digout)
 
         except:
             print u'ERROR! TERMINATE!'
@@ -228,6 +240,7 @@ class FinitePlayer(AbstractPlayerBase):
             # previous reset
             self.daq_lock.acquire()
             self.aotask.StartTask()
+            self.dotask.StartTask()
             self.aitask.StartTask()
 
             # blocking read
@@ -240,6 +253,7 @@ class FinitePlayer(AbstractPlayerBase):
             
             self.aitask.stop()
             self.aotask.stop()
+            self.dotask.stop()
             
         except:
             print u'ERROR! TERMINATE!'

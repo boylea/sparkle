@@ -218,6 +218,13 @@ class AOTaskFinite(Task):
         self.WriteAnalogF64(self.npoints, 0, 10.0, DAQmx_Val_GroupByChannel,
                             output, w, None);
 
+        # create an array to always output 5V, except last sample, which should 
+        # set the port back to low
+        # digout = np.ones_like(output)*5
+        # digout[-1] = 0
+        # self.WriteDigitalLines(self.npoints, 0, 10.0, DAQmx_Val_GroupByChannel,
+        #                         digout, None)
+
     def wait(self):
         """returns after the generation finishes"""
         self.WaitUntilTaskDone(10.0)
@@ -259,9 +266,9 @@ class DigitalOutTask(Task):
 
         self.CfgSampClkTiming(clksrc, rate, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 
                               npoints)
-        w = c_int32()
 
-        data = np.array([0,1], dtype=np.uint8)
+    def write(self, data):
+        w = c_int32()
         self.WriteDigitalLines(len(data), False, DAQmx_Val_WaitInfinitely, DAQmx_Val_GroupByChannel, data, w, None)
 
     def start(self):
